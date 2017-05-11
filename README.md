@@ -119,7 +119,6 @@ sample_chaincode_test.goを以下のように編集します。
 ```
 package main
 import (
-    // "encoding/json" //コメントアウト
     "fmt"
     "testing"
     "github.com/hyperledger/fabric/core/chaincode/shim"
@@ -140,7 +139,6 @@ sample_chaincode_test.goを以下のように編集します。
 ```
 package main
 import (
-//    "encoding/json" //コメントアウト
     "fmt"
     "testing"
     "github.com/hyperledger/fabric/core/chaincode/shim"
@@ -244,9 +242,7 @@ CreateLoanApplicationも実装します。以下をsample_chaincode.goに追加�
 ```sample_chaincode.go
 package main
 import (
-  //  "encoding/json"
     "fmt"
-  //  "testing"
     "github.com/hyperledger/fabric/core/chaincode/shim"
 )
 
@@ -325,9 +321,7 @@ exit status 1
 package main
 import (
     "errors"
-  //  "encoding/json"
     "fmt"
-  //  "testing"
     "github.com/hyperledger/fabric/core/chaincode/shim"
 )
 
@@ -522,9 +516,7 @@ LoanApplicationをsample_chaincode.goに記述します。
 package main
 import (
     "errors"
-//    "encoding/json"
     "fmt"
-  //  "testing"
     "github.com/hyperledger/fabric/core/chaincode/shim"
 )
 
@@ -877,3 +869,5 @@ func TestInvokeFunctionValidation2(t *testing.T) {
  
 }
 ```
+
+これでテストを実行し正常終了すればOKです。
