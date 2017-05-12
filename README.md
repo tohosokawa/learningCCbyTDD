@@ -1,6 +1,6 @@
-Go 環境設定
+Go言語の環境設定を行います。
 
-# 1. Homebrewでのインストール
+# 1. Homebrewでのインストール（Mac）
 
 ```
 $ brew install go
