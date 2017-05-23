@@ -1,31 +1,48 @@
 Go言語の環境設定を行います。
 
-# 1. Homebrewでのインストール（Mac）
+# 1. Cloud9のWorkspaceを作成
 
-```
-$ brew install go
-==> Downloading https://homebrew.bintray.com/bottles/go-1.6.3.el_capitan.bottle.1.tar.gz
-######################################################################## 100.0%
-==> Pouring go-1.6.3.el_capitan.bottle.1.tar.gz
-==> Caveats
-As of go 1.2, a valid GOPATH is required to use the `go get` command:
-  https://golang.org/doc/code.html#GOPATH
+[Cloud9](https://c9.io)のアカウントを作成し、新しいWorkspaceを作成します。
 
-You may wish to add the GOROOT-based install location to your PATH:
-  export PATH=$PATH:/usr/local/opt/go/libexec/bin
-==> Summary
-🍺  /usr/local/Cellar/go/1.6.3: 5,778 files, 328.4M
-% which go
-/usr/local/bin/go
-```
+* Workspace name : learning-chiancode (Anything OK)
+* Description(ワークスペースの説明) : hyperledgerのchaincodeの学習環境 (Anything OK)
+* Hosted workspace(他のユーザから環境が見えるか) : Public(無料アカウントでは１つだけPrivateが作れる。あとで変更できます。)
+* Clone from Git or Mercurial URL : Blank（特に設定不要）
+* Choose a template : Blank(他でもいいですが、今回の目的では標準的なUbuntu環境で十分です)
 
-# 2. Version確認
+![new workspace](static/cloud9_new_workspace.png)
+
+# 2. Go言語のVersion確認
+
+Cloud9のWorkspaceには標準でGo言語がインストールされています。
 
 ```
 $ go version
-go version go1.5.1 darwin/amd64
+go version go1.7.3 darwin/amd64
 ```
-# 3. 稼働確認
+
+# 3. GOPATH環境設定
+
+$GOPATH は設定済みです。
+
+```
+$ echo $GOPATH
+/home/ubuntu/workspace
+```
+
+変更したい場合は、下記などのようにすることで変更可能です。
+
+```
+$ vi ~/.bashrc
+# Add the below line at the end of file.
+export GOPATH="/home/ubuntu/workspace/new/gopath"
+```
+
+```
+$ source ~/.bashrc
+```
+
+# 4. 稼働確認
 go run サブコマンドを使うことでソースコードをビルドすると同時に実行する
 
 ```
@@ -41,29 +58,9 @@ func main() {
 }
 ```
 
-# 4. GOPATH環境設定
-
-[こちらを参考にしました。](http://blog.amedama.jp/entry/2015/10/06/231038)
-[こちらも参考にしました。](http://www.songmu.jp/riji/entry/prepare-golang-development-environment-on-mac.html)
-
-$GOPATH だけを決めればOKです。$GOPATH はどこでも良いので、ここでは $HOME/go を $GOPATH に設定します。
-
 ```
-$ export GOPATH=$HOME/go
-$ export PATH=$PATH:$GOPATH/bin
-```
-
-必要に応じてシェル起動を定義
-
-```
-$ echo 'export GOPATH=$HOME/go >> ~/.bashrc
-$ echo 'export PATH=$PATH:$GOPATH/bin' >> ~/.bashrc
-```
-
-$GOPATHで指定したディレクトリの作成
-
-```
-$ mkdir -p ${GOPATH}
+$ go run helloworld.go
+Hello, World!
 ```
 
 
@@ -76,17 +73,6 @@ $ cd $GOPATH/src/github.com/hyperledger
 
 # Clone the appropriate release codebase into $GOPATH/src/github.com/hyperledger/fabric
 # Note that the v0.5 release is a branch of the repository.  It is defined below after the -b argument
-$ git clone -b v0.6 http://gerrit.hyperledger.org/r/fabric
-```
-失敗したのでこちら
-
-```
-$ git clone -b v0.6.1-preview https://github.com/hyperledger/fabric.git
-```
-
-失敗したのでこちら
-
-```
 $ git clone -b v0.6 http://gerrit.hyperledger.org/r/fabric
 ```
 
@@ -124,6 +110,7 @@ import (
     "github.com/hyperledger/fabric/core/chaincode/shim"
 )
 ```
+
 testingパッケージをimportしているのですが、これはGoパッケージの自動テストを実装するために行います。
 
 [Goの自動テストについての参考URLはこちらから。](http://golang.jp/pkg/testing)
