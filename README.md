@@ -42,6 +42,7 @@ $ echo $GOPATH
 ```
 
 変更したい場合は、下記などのようにすることで変更可能です。
+（特に変更する必要はありません。）
 
 ```
 $ vi ~/.bashrc
@@ -88,6 +89,8 @@ $ cd $GOPATH/src/github.com/hyperledger
 $ git clone -b v0.6 http://gerrit.hyperledger.org/r/fabric
 ```
 
+### 2. 動作確認
+
 Buildしてエラーがないか確認します。
 
 ```
@@ -99,14 +102,14 @@ $ go build ./
 
 Buildでエラーが発生しなければ、```build_test``` という実行ファイルが出来ているはずです。
 
+## Getting started with TDD
 
-# 6. テストドリブン開発の事前準備
+### 1. モックのソースコードの事前準備
 
-mock のソース (varunmockstub.go) をDownloadして、
+mock stub のソース (```varunmockstub.go```) を下記のディレクトリに置きます。
 
 $GOPATH/src/github.com/hyperledger/fabric/core/chaincode/shim/
 
-にコピーする。
 
 ```
 $ cd $GOPATH/src/github.com/hyperledger/fabric/core/chaincode/shim/
@@ -115,7 +118,9 @@ $ wget https://raw.githubusercontent.com/tohosokawa/learningCCbyTDD/cloud9/varun
 
 上記のソースコードのオリジナルは、[チュートリアルページ](https://www.ibm.com/developerworks/cloud/library/cl-ibm-blockchain-chaincode-testing-using-golang/index.html#mockstub)の下段に置かれているものです。
 
-Workディレクトリを作成
+### 2. 開発コードの準備
+
+Workディレクトリ(sample_tdd) を作成
 
 ```
 $ mkdir -p ~/workspace/sample_tdd
@@ -124,8 +129,8 @@ $ cd ~/workspace/sample_tdd
 
 sample_tddディレクトリを右クリックしたり、terminalから以下2つのファイルを作成します。
 
-1. sample_chaincode_test.go 
-2. sample_chaincode.go
+1. sample_chaincode_test.go : sample_chaincode.goのテストを記述するファイル。(テスト対象コード)_test.go という命名規則がある。
+2. sample_chaincode.go : 今回のローンアプリのユースケースを記述する。
 
 ```
 $ touch sample_chaincode.go
@@ -149,7 +154,12 @@ testingパッケージをimportしているのですが、これはGoパッケ�
 
 さらに先程コピーしたテスト用のスタブファイル（CustomMockStub）とchaincodeを実装するために、shimをimportしています。
 
-# 7. CreateLoanApplicationの実装
+エディタで編集して保存すると、自動的に変更される場合（インデントの変更や空白行の挿入等）があります。
+これはCloud9の標準設定では、Go言語の場合はファイル保存時に ```gofmt -w "$file"``` というコマンドで整形が行われるためです。
+(gofmtはGo言語標準の整形ツールです。)
+
+
+### 3. CreateLoanApplicationの実装
 
 loan application IDやloan applicationをinputとして、ChaincodeStubInterfaceを使用します。
 
@@ -642,7 +652,7 @@ func CreateLoanApplication(stub shim.ChaincodeStubInterface, args []string) ([]b
 
 PutStateによって、keyとvalueのペアを保管します。この場合はapplication IDがkeyであり、loan application JSON文字列がvalueになります。実行すると格納されるbyte配列が帰って正常に終了します。
 
-# 8. invoke methodの実装
+### 8. invoke methodの実装
 
 
 invokeの主な役割としてはしかるべき権限を持った人かのチェックや、正しいfunctionの名前で実行されているかなどをチェックを行う。
