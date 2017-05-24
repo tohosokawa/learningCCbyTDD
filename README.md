@@ -116,7 +116,8 @@ $ cd $GOPATH/src/github.com/hyperledger/fabric/core/chaincode/shim/
 $ wget https://raw.githubusercontent.com/tohosokawa/learningCCbyTDD/cloud9/varunmockstub.go
 ```
 
-上記のソースコードのオリジナルは、[チュートリアルページ](https://www.ibm.com/developerworks/cloud/library/cl-ibm-blockchain-chaincode-testing-using-golang/index.html#mockstub)の下段に置かれているものです。
+上記のソースコードのオリジナルは、[チュートリアルページ](https://www.ibm.com/developerworks/cloud/library/cl-ibm-blockchain-chaincode-testing-using-golang/index.html#artdownload)の下段に
+```Code samples in this tutorial```として置かれているものです。
 
 ### 3.2. 開発コードの準備
 
@@ -279,6 +280,30 @@ func (t *SampleChaincode) Invoke(stub shim.ChaincodeStubInterface, function stri
 }
 ```
 
+SampleChaincodeはshim.NewCustomMockStub()にChaincode型の値として渡しているため、
+下記に定義されているようにInit, Invoke, Queryの３つの関数が必要になります。
+
+src/github.com/hyperledger/fabric/chaincode/shim/interfaces.go
+
+```go
+type Chaincode interface {
+	// Init is called during Deploy transaction after the container has been
+	// established, allowing the chaincode to initialize its internal data
+	Init(stub ChaincodeStubInterface, function string, args []string) ([]byte, error)
+
+	// Invoke is called for every Invoke transactions. The chaincode may change
+	// its state variables
+	Invoke(stub ChaincodeStubInterface, function string, args []string) ([]byte, error)
+
+	// Query is called for Query transactions. The chaincode may only read
+	// (but not modify) its state variables and return the result
+	Query(stub ChaincodeStubInterface, function string, args []string) ([]byte, error)
+}
+```
+
+
+
+
 必要なメソッドを定義するとテストがとおるようになります。
 これがTDDのGreeの段階です。
 
@@ -363,7 +388,7 @@ FAIL    _/home/ubuntu/workspace/sample_tdd      0.033s
 ```go
 func CreateLoanApplication(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
     fmt.Println("Entering CreateLoanApplication")
-    return nil, errors.New("Expected atleast two arguments for loan application creation")
+    return nil, errors.New("Expected atleast two arguments for loan application creation") // <-- return errors
 }
 ```
 
@@ -441,17 +466,12 @@ FAIL    _/home/ubuntu/workspace/sample_tdd      0.029s
 ```
 
 正しい値をCreateLoanApplication()に渡していますが、エラーが返るためにテストが予想どおり失敗します。
-入力値の数をチェックするように、以下のように書き換えます。
-
+入力値の数をチェックするように、CreateLoanApplication()を以下のように書き換えます。
 
 ```sample_chaincode.go
-func (t *SampleChaincode) Invoke(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
-    return nil, nil
-}
-
 func CreateLoanApplication(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
     fmt.Println("Entering CreateLoanApplication")
-    if len(args) < 2 {
+    if len(args) < 2 {  // <-- This check code is inserted.
         fmt.Println("Invalid number of args")
         return nil, errors.New("Expected atleast two arguments for loan application creation")
     }
