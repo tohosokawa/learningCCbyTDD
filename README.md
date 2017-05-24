@@ -3,9 +3,9 @@
 Hyperledger の ChaincodeをTDD（テスト駆動開発）をしながら学ぶための手順です。
 
 
-## Go言語の環境設定
+## 1. Go言語の環境設定
 
-### 1. Cloud9のWorkspaceを作成
+### 1.1. Cloud9のWorkspaceを作成
 
 [Cloud9](https://c9.io)のアカウントを作成し、新しいWorkspaceを作成します。
 
@@ -23,7 +23,7 @@ Workspaceを作成すると下記のような画面が表示されます。
 
 ![workspace](static/c9_workspace.png)
 
-### 2. Go言語のVersion確認
+### 1.2. Go言語のVersion確認
 
 Cloud9のWorkspaceには標準でGo言語がインストールされています。
 
@@ -32,7 +32,7 @@ $ go version
 go version go1.7.3 darwin/amd64
 ```
 
-### 3. GOPATH環境設定
+### 1.3. GOPATH環境設定
 
 $GOPATH は設定済みです。
 
@@ -54,7 +54,7 @@ export GOPATH="/home/ubuntu/workspace/new/gopath"
 $ source ~/.bashrc
 ```
 
-### 4. 稼働確認
+### 1.4. 動作確認
 go run サブコマンドを使うことでソースコードをビルドすると同時に実行する
 
 ```
@@ -75,9 +75,9 @@ $ go run helloworld.go
 Hello, World!
 ```
 
-## Hyperledgerの環境準備
+## 2. Hyperledgerの環境準備
 
-### 1. サンプルのチェーンコードをクローンする
+### 2.1. サンプルのチェーンコードをクローンする
 
 ```
 # Create the parent directories on your GOPATH
@@ -89,7 +89,7 @@ $ cd $GOPATH/src/github.com/hyperledger
 $ git clone -b v0.6 http://gerrit.hyperledger.org/r/fabric
 ```
 
-### 2. 動作確認
+### 2.2. 動作確認
 
 Buildしてエラーがないか確認します。
 
@@ -102,9 +102,9 @@ $ go build ./
 
 Buildでエラーが発生しなければ、```build_test``` という実行ファイルが出来ているはずです。
 
-## Getting started with TDD
+## 3. Getting started with TDD
 
-### 1. モックのソースコードの事前準備
+### 3.1. モックのソースコードの事前準備
 
 mock stub のソース (```varunmockstub.go```) を下記のディレクトリに置きます。
 
@@ -118,7 +118,7 @@ $ wget https://raw.githubusercontent.com/tohosokawa/learningCCbyTDD/cloud9/varun
 
 上記のソースコードのオリジナルは、[チュートリアルページ](https://www.ibm.com/developerworks/cloud/library/cl-ibm-blockchain-chaincode-testing-using-golang/index.html#mockstub)の下段に置かれているものです。
 
-### 2. 開発コードの準備
+### 3.2. 開発コードの準備
 
 Workディレクトリ(sample_tdd) を作成
 
@@ -159,11 +159,20 @@ testingパッケージをimportしているのですが、これはGoパッケ�
 (gofmtはGo言語標準の整形ツールです。)
 
 
-### 3. CreateLoanApplicationの実装
+## 4. CreateLoanApplicationの実装
 
-loan application IDやloan applicationをinputとして、ChaincodeStubInterfaceを使用します。
+### 実装の要求
+
+これからsample_chaincode.goに実装する CreateLoanApplication() の要求仕様は下記です。
+
+1. CreateLoanApplicationは ```loan application ID```と```loan applicationを表すJSON```と```ChaincodeStubInterface```を引数にとる。
+2. 生成された ```loan application を表すserialized JSON```と```errorオブジェクト```を返却する。
+3. 入力値が不足していたり無効な場合は ```validation error``` を throw する
+
 
 sample_chaincode_test.goを以下のように編集します。
+（TDDでは実装の前に要求仕様からテストを書きます。）
+
 
 ```
 package main
@@ -184,20 +193,32 @@ func TestCreateLoanApplication (t *testing.T) {
 }
 ```
 
-loan applicationが正しく作られたか、エラーの場合はエラーメッセージを出力するようにします。
-
 Golang testing packageを実行するために、functionの名前は必ずTest* にします。
+またこのtest function は```*testing.T```を引数にとります。
 
-この状態でgo testを実行して稼働させてみます。
+このテストコードは```SampleChaincode```をテストするためのコードです。
+
+この状態でgo testを実行して稼働させると、sample_chaincode.goに何も入っていないためエラーになったというメッセージが出力されます。
 
 ```
+$ cd ~/workspace/sample_tdd
 $ go test
  can't load package: package .:
  sample_chaincode.go:1:1:1 expected 'package', found 'EOF'
 ```
 
-sample_chaincode.goに何も入っていないためエラーになったというメッセージです。
+何も実装していないため、当然テストは失敗しますが、これがTDDでのRedの段階です。
+
+TDDでの開発サイクルは Red/Green/Refactor と呼ばれます。
+
+* <span style="color: red; ">Red</span> : テストコードを書き、実行して**失敗する**
+* <span style="color: green; ">Green</span> : テストに通る最低限のコードを書く
+* <span style="color: blue; ">Refactor</span> : コードのリファクタリング（重複部分の関数化など）を行う。
+
+
 それでは、以下のとおりにsample_chaincode.go を編集します。
+
+### 4.1 最低限の実装
 
 ```
 package main
@@ -207,7 +228,9 @@ package main
 
 ```
 $ go test
+# _/home/ubuntu/workspace/sample_tdd
 ./sample_chaincode_test.go:13: undefined: SampleChaincode
+FAIL    _/home/ubuntu/workspace/sample_tdd [build failed]
 ```
 
 SampleChaincodeの定義がないのでエラーとなりました。そこで、以下のようにSampleChaincodeを実装します。
@@ -223,8 +246,10 @@ type SampleChaincode struct {
 
 ```
 $ go test
+# _/home/ubuntu/workspace/sample_tdd
 ./sample_chaincode_test.go:13: cannot use new(SampleChaincode) (type *SampleChaincode) as type shim.Chaincode in argument to shim.NewCustomMockStub:
-	*SampleChaincode does not implement shim.Chaincode (missing Init method)
+        *SampleChaincode does not implement shim.Chaincode (missing Init method)
+FAIL    _/home/ubuntu/workspace/sample_tdd [build failed]
 ```
 
 chaincodeのInit, Query,Invokeなどの関数を定義するshim.Chaincodeが実装されていないためです。
@@ -262,9 +287,12 @@ func (t *SampleChaincode) Invoke(stub shim.ChaincodeStubInterface, function stri
 ```
 $ go test
 Entering TestCreateLoanApplication
-2017/05/11 14:05:09 MockStub( mockStub &{} )
+2017/05/24 05:10:26 MockStub( mockStub &{} )
 PASS
+ok      _/home/ubuntu/workspace/sample_tdd      0.039s
 ```
+
+### 4. CreateLoanApplicationの実装
 
 CreateLoanApplicationも実装します。以下をsample_chaincode.goに追加します。
 
