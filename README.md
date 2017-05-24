@@ -161,7 +161,7 @@ testingパッケージをimportしているのですが、これはGoパッケ�
 
 ## 4. CreateLoanApplicationの実装
 
-### 実装の要求
+### 4.1. 実装の要求
 
 これからsample_chaincode.goに実装する CreateLoanApplication() の要求仕様は下記です。
 
@@ -218,7 +218,7 @@ TDDでの開発サイクルは Red/Green/Refactor と呼ばれます。
 
 それでは、以下のとおりにsample_chaincode.go を編集します。
 
-### 4.1 最低限の実装
+### 4.2. SampleChaincodeの実装
 
 ```
 package main
@@ -260,9 +260,6 @@ chaincodeのInit, Query,Invokeなどの関数を定義するshim.Chaincodeが実
 ```sample_chaincode.go
 package main
 import (
-  //  "encoding/json"
-  //  "fmt"
-  //  "testing"
     "github.com/hyperledger/fabric/core/chaincode/shim"
 )
 
@@ -282,7 +279,8 @@ func (t *SampleChaincode) Invoke(stub shim.ChaincodeStubInterface, function stri
 }
 ```
 
-テストを実行すると正しくアプリケーションが作成されました！
+必要なメソッドを定義するとテストがとおるようになります。
+これがTDDのGreeの段階です。
 
 ```
 $ go test
@@ -292,53 +290,33 @@ PASS
 ok      _/home/ubuntu/workspace/sample_tdd      0.039s
 ```
 
-### 4. CreateLoanApplicationの実装
+### 4.3. CreateLoanApplicationの実装
 
-CreateLoanApplicationも実装します。以下をsample_chaincode.goに追加します。
+sample_chaincode.goに下記のCreateLoanApplication() を実装します。
 
-```sample_chaincode.go
-package main
-import (
-    "fmt"
-    "github.com/hyperledger/fabric/core/chaincode/shim"
-)
-
-type SampleChaincode struct {
-}
-
-func (t *SampleChaincode) Init(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
-    return nil, nil
-}
- 
-func (t *SampleChaincode) Query(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
-    return nil, nil
-}
- 
-func (t *SampleChaincode) Invoke(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
-    return nil, nil
-}
-
+```
 func CreateLoanApplication(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
     fmt.Println("Entering CreateLoanApplication")
     return nil, nil
 }
 ```
 
-sample_chaincode_test.goに以下の通りに、TestCreateLoanApplicationValidationの関数を追加します。ただし、
-CreateLoanApplication method が呼び込まれるまえにトランザクションを開始する必要があります。
-なぜなら、CreateLoanApplication method はloanアプリケーションをレジャーに保存するためです。
+CreateLoanApplication()にて、```fmt.Println```というメソッドを使用するため、
+下記のようにimportに "fmt" を追加します。
+
+```
+import (
+    "fmt"
+	"github.com/hyperledger/fabric/core/chaincode/shim"
+)
+```
+
+sample_chaincode_test.go に CreateLoanApplication()のテスト関数として
+下記の TestCreateLoanApplicationValidation()を追加します。
+
+CreateLoanApplication()に空の入力をした場合にエラーが返ることを確認するテストです。
 
 ```sample_chaincode_test.go
-func TestCreateLoanApplication (t *testing.T) {
-    fmt.Println("Entering TestCreateLoanApplication")
-    attributes := make(map[string][]byte)
-    //Create a custom MockStub that internally uses shim.MockStub
-    stub := shim.NewCustomMockStub("mockStub", new(SampleChaincode), attributes)
-    if stub == nil {
-        t.Fatalf("MockStub creation failed")
-    }
-}
-
 func TestCreateLoanApplicationValidation(t *testing.T) {
     fmt.Println("Entering TestCreateLoanApplicationValidation")
     attributes := make(map[string][]byte)
@@ -356,51 +334,46 @@ func TestCreateLoanApplicationValidation(t *testing.T) {
 }
 ```
 
-この状態で実行してみると、予想どおりvalidationエラーになりました。
+**テストを記述する際にはstub.MockTransactionStart(ID)とstub.MockTransactionEnd(ID)に注意してください。**
+帳票への書き込みが発生する場合には、必ずtransactionが開始している状態でなければいけません
+CreateLoanApplication()でも書き込みが発生するため、stub.MockTransactionStart(ID)で
+transactionを開始し、必ず同じIDでstub.MockTransactionEnd(ID)を呼ぶことで完了しています。
+
+
+この状態で実行してみると、予想どおりvalidationエラーになります。（Red Stage)
 
 ```
 $ go test
 Entering TestCreateLoanApplication
-2017/05/11 14:34:37 MockStub( mockStub &{} )
+2017/05/24 07:43:49 MockStub( mockStub &{} )
 Entering TestCreateLoanApplicationValidation
-2017/05/11 14:34:37 MockStub( mockStub &{} )
+2017/05/24 07:43:49 MockStub( mockStub &{} )
 Entering CreateLoanApplication
 --- FAIL: TestCreateLoanApplicationValidation (0.00s)
-	sample_chaincode_test.go:30: Expected CreateLoanApplication to return validation error
+        sample_chaincode_test.go:30: Expected CreateLoanApplication to return validation error
 FAIL
 exit status 1
+FAIL    _/home/ubuntu/workspace/sample_tdd      0.033s
 ```
 
-以下のように、sample_chaincode.goのCreateLoanApplicationの返り値にStringのエラーメッセージを返すように修正します。
-このとき、errorsをimportしておきます。
+次に、テストを通すためにCreateLoanApplication()を下記のように修正します。
+(２つ目の戻り値を nilから errorsにしています)
 
 ```
-package main
+func CreateLoanApplication(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
+    fmt.Println("Entering CreateLoanApplication")
+    return nil, errors.New("Expected atleast two arguments for loan application creation")
+}
+```
+
+戻り値にerrors.New()を使うため、importに "errors" を追加します。
+
+```
 import (
     "errors"
     "fmt"
     "github.com/hyperledger/fabric/core/chaincode/shim"
 )
-
-type SampleChaincode struct {
-}
-
-func (t *SampleChaincode) Init(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
-    return nil, nil
-}
- 
-func (t *SampleChaincode) Query(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
-    return nil, nil
-}
- 
-func (t *SampleChaincode) Invoke(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
-    return nil, nil
-}
-
-func CreateLoanApplication(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
-    fmt.Println("Entering CreateLoanApplication")
-    return nil, errors.New("Expected atleast two arguments for loan application creation")
-}
 ```
 
 ここでテストを実行します。
@@ -408,15 +381,15 @@ func CreateLoanApplication(stub shim.ChaincodeStubInterface, args []string) ([]b
 ```
 $ go test
 Entering TestCreateLoanApplication
-2017/05/11 15:10:31 MockStub( mockStub &{} )
+2017/05/24 08:18:02 MockStub( mockStub &{} )
 Entering TestCreateLoanApplicationValidation
-2017/05/11 15:10:31 MockStub( mockStub &{} )
+2017/05/24 08:18:02 MockStub( mockStub &{} )
 Entering CreateLoanApplication
 PASS
-ok
+ok      _/home/ubuntu/workspace/sample_tdd      0.072s
 ```
 
-正常に終了することが確認できました。
+正常に終了することが確認できました。(Green Stage)
 
 このままではエラーのメッセージを返すだけなので、別のテストを実行するために以下の関数を追加します。
 
