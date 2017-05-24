@@ -44,20 +44,20 @@ $ echo $GOPATH
 変更したい場合は、下記などのようにすることで変更可能です。
 （特に変更する必要はありません。）
 
-```
+```bash
 $ vi ~/.bashrc
 # Add the below line at the end of file.
 export GOPATH="/home/ubuntu/workspace/new/gopath"
 ```
 
-```
+```bash
 $ source ~/.bashrc
 ```
 
 ### 1.4. 動作確認
 go run サブコマンドを使うことでソースコードをビルドすると同時に実行する
 
-```
+```bash
 $ vi helloworld.go
 package main
 
@@ -70,7 +70,7 @@ func main() {
 }
 ```
 
-```
+```bash
 $ go run helloworld.go
 Hello, World!
 ```
@@ -79,13 +79,13 @@ Hello, World!
 
 ### 2.1. サンプルのチェーンコードをクローンする
 
-```
+```bash
 # Create the parent directories on your GOPATH
 $ mkdir -p $GOPATH/src/github.com/hyperledger
 $ cd $GOPATH/src/github.com/hyperledger 
 
 # Clone the appropriate release codebase into $GOPATH/src/github.com/hyperledger/fabric
-# Note that the v0.5 release is a branch of the repository.  It is defined below after the -b argument
+# Note that the v0.6 release is a branch of the repository.  It is defined below after the -b argument
 $ git clone -b v0.6 http://gerrit.hyperledger.org/r/fabric
 ```
 
@@ -93,7 +93,7 @@ $ git clone -b v0.6 http://gerrit.hyperledger.org/r/fabric
 
 Buildしてエラーがないか確認します。
 
-```
+```bash
 $ mkdir -p ~/workspace/build_test
 $ cd ~/workspace/build_test
 $ wget https://raw.githubusercontent.com/IBM-Blockchain/example02/v2.0/chaincode/chaincode_example02.go
@@ -111,7 +111,7 @@ mock stub のソース (```varunmockstub.go```) を下記のディレクトリ�
 $GOPATH/src/github.com/hyperledger/fabric/core/chaincode/shim/
 
 
-```
+```bash
 $ cd $GOPATH/src/github.com/hyperledger/fabric/core/chaincode/shim/
 $ wget https://raw.githubusercontent.com/tohosokawa/learningCCbyTDD/cloud9/varunmockstub.go
 ```
@@ -122,7 +122,7 @@ $ wget https://raw.githubusercontent.com/tohosokawa/learningCCbyTDD/cloud9/varun
 
 Workディレクトリ(sample_tdd) を作成
 
-```
+```bash
 $ mkdir -p ~/workspace/sample_tdd
 $ cd ~/workspace/sample_tdd
 ```
@@ -132,14 +132,14 @@ sample_tddディレクトリを右クリックしたり、terminalから以下2�
 1. sample_chaincode_test.go : sample_chaincode.goのテストを記述するファイル。(テスト対象コード)_test.go という命名規則がある。
 2. sample_chaincode.go : 今回のローンアプリのユースケースを記述する。
 
-```
+```bash
 $ touch sample_chaincode.go
 $ touch sample_chaincode_test.go
 ```
 
 ```sample_chaincode_test.go``` を以下のように編集します。
 
-```
+```go
 package main
 import (
     "fmt"
@@ -174,7 +174,7 @@ sample_chaincode_test.goを以下のように編集します。
 （TDDでは実装の前に要求仕様からテストを書きます。）
 
 
-```
+```go
 package main
 import (
     "fmt"
@@ -200,7 +200,7 @@ Golang testing packageを実行するために、functionの名前は必ずTest*
 
 この状態でgo testを実行して稼働させると、sample_chaincode.goに何も入っていないためエラーになったというメッセージが出力されます。
 
-```
+```bash
 $ cd ~/workspace/sample_tdd
 $ go test
  can't load package: package .:
@@ -220,13 +220,13 @@ TDDでの開発サイクルは Red/Green/Refactor と呼ばれます。
 
 ### 4.2. SampleChaincodeの実装
 
-```
+```go
 package main
 ```
 
 この状態で実行してみます。
 
-```
+```bash
 $ go test
 # _/home/ubuntu/workspace/sample_tdd
 ./sample_chaincode_test.go:13: undefined: SampleChaincode
@@ -235,7 +235,7 @@ FAIL    _/home/ubuntu/workspace/sample_tdd [build failed]
 
 SampleChaincodeの定義がないのでエラーとなりました。そこで、以下のようにSampleChaincodeを実装します。
 
-```
+```go
 package main
 
 type SampleChaincode struct {
@@ -244,7 +244,7 @@ type SampleChaincode struct {
 
 ここで実行してみると以下のようなエラーになります。
 
-```
+```bash
 $ go test
 # _/home/ubuntu/workspace/sample_tdd
 ./sample_chaincode_test.go:13: cannot use new(SampleChaincode) (type *SampleChaincode) as type shim.Chaincode in argument to shim.NewCustomMockStub:
@@ -282,7 +282,7 @@ func (t *SampleChaincode) Invoke(stub shim.ChaincodeStubInterface, function stri
 必要なメソッドを定義するとテストがとおるようになります。
 これがTDDのGreeの段階です。
 
-```
+```bash
 $ go test
 Entering TestCreateLoanApplication
 2017/05/24 05:10:26 MockStub( mockStub &{} )
@@ -294,7 +294,7 @@ ok      _/home/ubuntu/workspace/sample_tdd      0.039s
 
 sample_chaincode.goに下記のCreateLoanApplication() を実装します。
 
-```
+```go
 func CreateLoanApplication(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
     fmt.Println("Entering CreateLoanApplication")
     return nil, nil
@@ -304,7 +304,7 @@ func CreateLoanApplication(stub shim.ChaincodeStubInterface, args []string) ([]b
 CreateLoanApplication()にて、```fmt.Println```というメソッドを使用するため、
 下記のようにimportに "fmt" を追加します。
 
-```
+```go
 import (
     "fmt"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
@@ -343,7 +343,7 @@ transactionを開始し、必ず同じIDでstub.MockTransactionEnd(ID)を呼ぶ�
 
 この状態で実行してみると、予想どおりvalidationエラーになります。（Red Stage)
 
-```
+```bash
 $ go test
 Entering TestCreateLoanApplication
 2017/05/24 07:43:49 MockStub( mockStub &{} )
@@ -360,7 +360,7 @@ FAIL    _/home/ubuntu/workspace/sample_tdd      0.033s
 次に、テストを通すためにCreateLoanApplication()を下記のように修正します。
 (２つ目の戻り値を nilから errorsにしています)
 
-```
+```go
 func CreateLoanApplication(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
     fmt.Println("Entering CreateLoanApplication")
     return nil, errors.New("Expected atleast two arguments for loan application creation")
@@ -369,7 +369,7 @@ func CreateLoanApplication(stub shim.ChaincodeStubInterface, args []string) ([]b
 
 戻り値にerrors.New()を使うため、importに "errors" を追加します。
 
-```
+```go
 import (
     "errors"
     "fmt"
@@ -379,7 +379,7 @@ import (
 
 ここでテストを実行します。
 
-```
+```bash
 $ go test
 Entering TestCreateLoanApplication
 2017/05/24 08:18:02 MockStub( mockStub &{} )
@@ -423,7 +423,7 @@ func TestCreateLoanApplicationValidation2(t *testing.T) {
 
 追加した1行目、2行目でloan applicationのデータを生成しています。これで実行してみます。
 
-```
+```bash
 $ go test
 Entering TestCreateLoanApplication
 2017/05/24 09:02:37 MockStub( mockStub &{} )
@@ -461,7 +461,7 @@ func CreateLoanApplication(stub shim.ChaincodeStubInterface, args []string) ([]b
 
 これで実行すれば、テストがPASSされます。
 
-```
+```bash
 $ go test
 Entering TestCreateLoanApplication
 2017/05/24 09:11:50 MockStub( mockStub &{} )
@@ -481,7 +481,7 @@ ok      _/home/ubuntu/workspace/sample_tdd      0.025s
 このあとにloan applicationが生成され、Blockchainに書き込まれるかをテストします。
 以下のようにsample_chaincode_test.goに記述します。
 
-```
+```go
 package main
 import (
     "encoding/json" 
@@ -540,7 +540,7 @@ stub.GetState(loanApplicationID) はkeyに対応したバイト配列値を検�
 18行目では検索されたバイト配列をLoanApplicationに戻しています。
 以下のようなエラーになります。
 
-```
+```bash
 $ go test
 # _/Users/morizumiyuusuke/Documents/sample_tdd
 ./sample_chaincode_test.go:67: undefined: LoanApplication
@@ -602,7 +602,7 @@ func (t *SampleChaincode) Init(stub shim.ChaincodeStubInterface, function string
 これを実行するとinputする値がないのでエラーになるはずです。
 
 
-```
+```bash
 $ go test
 Entering TestCreateLoanApplication
 2017/05/11 21:26:41 MockStub( mockStub &{} )
@@ -692,7 +692,7 @@ caller/invokerの権限属性を上記のようにユーザーで定義ができ
 
 しかし当然ながらこのままではエラーとなります。実行結果は以下の通り。
 
-```
+```bash
 --- FAIL: TestInvokeValidation (0.00s)
 	sample_chaincode_test.go:111: Expected unauthorized user error to be returned
 FAIL
@@ -711,7 +711,7 @@ func (t *SampleChaincode) Invoke(stub shim.ChaincodeStubInterface, function stri
 テストの実行結果は正常実行されました。
 
 
-```
+```bash
 $ go test
 Entering TestInvokeValidation
 2017/05/12 00:35:37 MockStub( mockStub &{} )
@@ -792,7 +792,7 @@ func TestInvokeFunctionValidation(t *testing.T) {
 
 実行するとエラーになることがわかります。
 
-```
+```bash
 Entering Invoke
 --- FAIL: TestInvokeFunctionValidation (0.00s)
 	sample_chaincode_test.go:149: Expected invalid function name error
@@ -844,7 +844,7 @@ func TestInvokeFunctionValidation2(t *testing.T) {
 ```
 
 このあとに実行すると正しくエラーメッセージが出力されていることが確認できます。
-```
+```bash
 Entering TestInvokeFunctionValidation2
 2017/05/12 01:27:49 MockStub( mockStub &{} )
 Entering Invoke
