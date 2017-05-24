@@ -1,6 +1,11 @@
-Go言語の環境設定を行います。
+# Leaning Chaincode by TDD
 
-# 1. Cloud9のWorkspaceを作成
+Hyperledger の ChaincodeをTDD（テスト駆動開発）をしながら学ぶための手順です。
+
+
+## Go言語の環境設定
+
+### 1. Cloud9のWorkspaceを作成
 
 [Cloud9](https://c9.io)のアカウントを作成し、新しいWorkspaceを作成します。
 
@@ -12,7 +17,13 @@ Go言語の環境設定を行います。
 
 ![new workspace](static/cloud9_new_workspace.png)
 
-# 2. Go言語のVersion確認
+
+Workspaceを作成すると下記のような画面が表示されます。
+ディレクトリ構造や、ファイルエディタ、Terminalでの処理を行えます。
+
+![workspace](static/c9_workspace.png)
+
+### 2. Go言語のVersion確認
 
 Cloud9のWorkspaceには標準でGo言語がインストールされています。
 
@@ -21,7 +32,7 @@ $ go version
 go version go1.7.3 darwin/amd64
 ```
 
-# 3. GOPATH環境設定
+### 3. GOPATH環境設定
 
 $GOPATH は設定済みです。
 
@@ -42,7 +53,7 @@ export GOPATH="/home/ubuntu/workspace/new/gopath"
 $ source ~/.bashrc
 ```
 
-# 4. 稼働確認
+### 4. 稼働確認
 go run サブコマンドを使うことでソースコードをビルドすると同時に実行する
 
 ```
@@ -63,8 +74,9 @@ $ go run helloworld.go
 Hello, World!
 ```
 
+## Hyperledgerの環境準備
 
-# 5. サンプルのチェーンコードをクローンする
+### 1. サンプルのチェーンコードをクローンする
 
 ```
 # Create the parent directories on your GOPATH
@@ -79,28 +91,48 @@ $ git clone -b v0.6 http://gerrit.hyperledger.org/r/fabric
 Buildしてエラーがないか確認します。
 
 ```
-$ go build
+$ mkdir -p ~/workspace/build_test
+$ cd ~/workspace/build_test
+$ wget https://raw.githubusercontent.com/IBM-Blockchain/example02/v2.0/chaincode/chaincode_example02.go
+$ go build ./
 ```
+
+Buildでエラーが発生しなければ、```build_test``` という実行ファイルが出来ているはずです。
+
 
 # 6. テストドリブン開発の事前準備
 
-ソースをDownloadする。
-varunmockstub.go を $GOPATH/src/github.com/Hyperledger/fabric/core/chaincode/shim/ にコピーする。
+mock のソース (varunmockstub.go) をDownloadして、
+
+$GOPATH/src/github.com/hyperledger/fabric/core/chaincode/shim/
+
+にコピーする。
+
+```
+$ cd $GOPATH/src/github.com/hyperledger/fabric/core/chaincode/shim/
+$ wget https://raw.githubusercontent.com/tohosokawa/learningCCbyTDD/cloud9/varunmockstub.go
+```
+
+上記のソースコードのオリジナルは、[チュートリアルページ](https://www.ibm.com/developerworks/cloud/library/cl-ibm-blockchain-chaincode-testing-using-golang/index.html#mockstub)の下段に置かれているものです。
 
 Workディレクトリを作成
 
 ```
-$ cd worktemp
-$ mkdir sample_tdd
-$ cd sample_tdd
+$ mkdir -p ~/workspace/sample_tdd
+$ cd ~/workspace/sample_tdd
 ```
 
-適当なエディタを開いて、以下2つのファイルを作成します。
+sample_tddディレクトリを右クリックしたり、terminalから以下2つのファイルを作成します。
 
 1. sample_chaincode_test.go 
 2. sample_chaincode.go
 
-sample_chaincode_test.goを以下のように編集します。
+```
+$ touch sample_chaincode.go
+$ touch sample_chaincode_test.go
+```
+
+```sample_chaincode_test.go``` を以下のように編集します。
 
 ```
 package main
