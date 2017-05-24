@@ -27,7 +27,7 @@ Workspaceを作成すると下記のような画面が表示されます。
 
 Cloud9のWorkspaceには標準でGo言語がインストールされています。
 
-```
+```bash
 $ go version
 go version go1.7.3 darwin/amd64
 ```
@@ -36,7 +36,7 @@ go version go1.7.3 darwin/amd64
 
 $GOPATH は設定済みです。
 
-```
+```bash
 $ echo $GOPATH
 /home/ubuntu/workspace
 ```
