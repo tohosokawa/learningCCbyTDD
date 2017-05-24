@@ -335,7 +335,8 @@ func TestCreateLoanApplicationValidation(t *testing.T) {
 ```
 
 **テストを記述する際にはstub.MockTransactionStart(ID)とstub.MockTransactionEnd(ID)に注意してください。**
-帳票への書き込みが発生する場合には、必ずtransactionが開始している状態でなければいけません
+
+帳票への書き込みが発生する場合には、必ずtransactionが開始している状態でなければいけません。
 CreateLoanApplication()でも書き込みが発生するため、stub.MockTransactionStart(ID)で
 transactionを開始し、必ず同じIDでstub.MockTransactionEnd(ID)を呼ぶことで完了しています。
 
@@ -391,54 +392,59 @@ ok      _/home/ubuntu/workspace/sample_tdd      0.072s
 
 正常に終了することが確認できました。(Green Stage)
 
-このままではエラーのメッセージを返すだけなので、別のテストを実行するために以下の関数を追加します。
+### 4.4. Refactor1
+
+このままではCreateLoanApplication()がエラーのメッセージを返すだけなので、
+他の仕様を満たしていない部分がエラーになるように
+下記のテストを追加してリファクタリングを行います。
 
 
 ```sample_chaincode_test.go
 var loanApplicationID = "la1"
 var loanApplication = `{"id":"` + loanApplicationID + `","propertyId":"prop1","landId":"land1","permitId":"permit1","buyerId":"vojha24","personalInfo":{"firstname":"Varun","lastname":"Ojha","dob":"dob","email":"varun@gmail.com","mobile":"99999999"},"financialInfo":{"monthlySalary":16000,"otherExpenditure":0,"monthlyRent":4150,"monthlyLoanPayment":4000},"status":"Submitted","requestedAmount":40000,"fairMarketValue":58000,"approvedAmount":40000,"reviewedBy":"bond","lastModifiedDate":"21/09/2016 2:30pm"}`
-  
-  func TestCreateLoanApplicationValidation2(t *testing.T) {
-    fmt.Println("Entering TestCreateLoanApplicationValidation2")
-    attributes := make(map[string][]byte)
-    stub := shim.NewCustomMockStub("mockStub", new(SampleChaincode), attributes)
-    if stub == nil {
-        t.Fatalf("MockStub creation failed")
-    }
- 
-    stub.MockTransactionStart("t123")
-    _, err := CreateLoanApplication(stub, []string{loanApplicationID, loanApplication})
-    if err != nil {
-        t.Fatalf("Expected CreateLoanApplication to succeed")
-    }
-    stub.MockTransactionEnd("t123")
- 
+
+func TestCreateLoanApplicationValidation2(t *testing.T) {
+	fmt.Println("Entering TestCreateLoanApplicationValidation2")
+	attributes := make(map[string][]byte)
+	stub := shim.NewCustomMockStub("mockStub", new(SampleChaincode), attributes)
+	if stub == nil {
+		t.Fatalf("MockStub creation failed")
+	}
+
+	stub.MockTransactionStart("t123")
+	_, err := CreateLoanApplication(stub, []string{loanApplicationID, loanApplication})
+	if err != nil {
+		t.Fatalf("Expected CreateLoanApplication to succeed")
+	}
+	stub.MockTransactionEnd("t123")
+
 }
 ```
-1行目、2行目でloan applicationのデータを生成しています。これで実行してみます。
 
+追加した1行目、2行目でloan applicationのデータを生成しています。これで実行してみます。
 
 ```
 $ go test
 Entering TestCreateLoanApplication
-2017/05/11 20:10:14 MockStub( mockStub &{} )
+2017/05/24 09:02:37 MockStub( mockStub &{} )
 Entering TestCreateLoanApplicationValidation
-2017/05/11 20:10:14 MockStub( mockStub &{} )
+2017/05/24 09:02:37 MockStub( mockStub &{} )
 Entering CreateLoanApplication
 Entering TestCreateLoanApplicationValidation2
-2017/05/11 20:10:14 MockStub( mockStub &{} )
+2017/05/24 09:02:37 MockStub( mockStub &{} )
 Entering CreateLoanApplication
 --- FAIL: TestCreateLoanApplicationValidation2 (0.00s)
-	sample_chaincode_test.go:49: Expected CreateLoanApplication to succeed
+        sample_chaincode_test.go:49: Expected CreateLoanApplication to succeed
 FAIL
 exit status 1
+FAIL    _/home/ubuntu/workspace/sample_tdd      0.029s
 ```
 
-案の定エラーになるので、以下のように書き換えます。
+正しい値をCreateLoanApplication()に渡していますが、エラーが返るためにテストが予想どおり失敗します。
+入力値の数をチェックするように、以下のように書き換えます。
 
 
 ```sample_chaincode.go
-・・・・
 func (t *SampleChaincode) Invoke(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
     return nil, nil
 }
@@ -458,17 +464,19 @@ func CreateLoanApplication(stub shim.ChaincodeStubInterface, args []string) ([]b
 ```
 $ go test
 Entering TestCreateLoanApplication
-2017/05/11 20:23:28 MockStub( mockStub &{} )
+2017/05/24 09:11:50 MockStub( mockStub &{} )
 Entering TestCreateLoanApplicationValidation
-2017/05/11 20:23:28 MockStub( mockStub &{} )
+2017/05/24 09:11:50 MockStub( mockStub &{} )
 Entering CreateLoanApplication
 Invalid number of args
 Entering TestCreateLoanApplicationValidation2
-2017/05/11 20:23:28 MockStub( mockStub &{} )
+2017/05/24 09:11:50 MockStub( mockStub &{} )
 Entering CreateLoanApplication
 PASS
-ok
+ok      _/home/ubuntu/workspace/sample_tdd      0.025s
 ```
+
+### 4.4. refactor2
 
 このあとにloan applicationが生成され、Blockchainに書き込まれるかをテストします。
 以下のようにsample_chaincode_test.goに記述します。
