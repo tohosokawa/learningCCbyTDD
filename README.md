@@ -280,8 +280,8 @@ func (t *SampleChaincode) Invoke(stub shim.ChaincodeStubInterface, function stri
 }
 ```
 
-SampleChaincodeはshim.NewCustomMockStub()にChaincode型の値として渡しているため、
-下記に定義されているようにInit, Invoke, Queryの３つの関数が必要になります。
+SampleChaincodeはsample_chaincode_test.goでshim.NewCustomMockStub()にChaincode型の値として渡しているため、
+下記に定義されているようにInit, Invoke, Queryの３つの関数を実装する必要があります。
 
 $GOPATH/src/github.com/hyperledger/fabric/chaincode/shim/interfaces.go
 
@@ -301,11 +301,8 @@ type Chaincode interface {
 }
 ```
 
-
-
-
 必要なメソッドを定義するとテストがとおるようになります。
-これがTDDのGreeの段階です。
+これがTDDのGreen Stage です。
 
 ```bash
 $ go test
@@ -448,7 +445,7 @@ func TestCreateLoanApplicationValidation2(t *testing.T) {
 }
 ```
 
-追加した1行目、2行目でloan applicationのデータを生成しています。これで実行してみます。
+追加した1行目、2行目でloanの申し込みデータを生成しています。これで実行してみます。
 
 ```bash
 $ go test
@@ -498,91 +495,96 @@ PASS
 ok      _/home/ubuntu/workspace/sample_tdd      0.025s
 ```
 
-### 4.4. refactor2
+### 4.5. refactor2
 
-このあとにloan applicationが生成され、Blockchainに書き込まれるかをテストします。
-以下のようにsample_chaincode_test.goに記述します。
+このあとにloanの申し込みデータが生成され、Blockchainに書き込まれるかをテストします。
+以下の関数を sample_chaincode_test.go に追加します。
 
-```go
-package main
-import (
-    "encoding/json" 
-    "fmt"
-    "testing"
-    "github.com/hyperledger/fabric/core/chaincode/shim"
-)
+コードの前半は前のテストと同様にstubのセットアップです。
 
-・・・・（途中省略）
-
-func TestCreateLoanApplicationValidation3(t *testing.T) {
-    fmt.Println("Entering TestCreateLoanApplicationValidation3")
-    attributes := make(map[string][]byte)
-    stub := shim.NewCustomMockStub("mockStub", new(SampleChaincode), attributes)
-    if stub == nil {
-        t.Fatalf("MockStub creation failed")
-    }
- 
-    stub.MockTransactionStart("t123")
-    CreateLoanApplication(stub, []string{loanApplicationID, loanApplication})
-    stub.MockTransactionEnd("t123")
- 
-    var la LoanApplication
-    bytes, err := stub.GetState(loanApplicationID)
-    if err != nil {
-        t.Fatalf("Could not fetch loan application with ID " + loanApplicationID)
-    }
-    err = json.Unmarshal(bytes, &la)
-    if err != nil {
-        t.Fatalf("Could not unmarshal loan application with ID " + loanApplicationID)
-    }
-    var errors = []string{}
-    var loanApplicationInput LoanApplication
-    err = json.Unmarshal([]byte(loanApplication), &loanApplicationInput)
-    if la.ID != loanApplicationInput.ID {
-        errors = append(errors, "Loan Application ID does not match")
-    }
-    if la.PropertyId != loanApplicationInput.PropertyId {
-        errors = append(errors, "Loan Application PropertyId does not match")
-    }
-    if la.PersonalInfo.Firstname != loanApplicationInput.PersonalInfo.Firstname {
-        errors = append(errors, "Loan Application PersonalInfo.Firstname does not match")
-    }
-    //Can be extended for all fields
-    if len(errors) > 0 {
-        t.Fatalf("Mismatch between input and stored Loan Application")
-        for j := 0; j < len(errors); j++ {
-            fmt.Println(errors[j])
-        }
-    }
-}
-```
-1-12行目は前述と同様にstubのセットアップ。14行目は10行目のinvokedで成城通り作成されたloan application objectを検索します。
+14行目は10行目のinvokedで成城通り作成されたloan application objectを検索します。
 stub.GetState(loanApplicationID) はkeyに対応したバイト配列値を検索します。
 この場合はloan application IDをレジャーから検索します。
 18行目では検索されたバイト配列をLoanApplicationに戻しています。
-以下のようなエラーになります。
+
+```sample_chaincode_test.go
+func TestCreateLoanApplicationValidation3(t *testing.T) {
+    ////////////////////////////////////
+    // Start setup
+	fmt.Println("Entering TestCreateLoanApplicationValidation3")
+	attributes := make(map[string][]byte)
+	stub := shim.NewCustomMockStub("mockStub", new(SampleChaincode), attributes)
+	if stub == nil {
+		t.Fatalf("MockStub creation failed")
+	}
+
+	stub.MockTransactionStart("t123")
+	CreateLoanApplication(stub, []string{loanApplicationID, loanApplication})
+	stub.MockTransactionEnd("t123")
+    // End setup
+    ////////////////////////////////////
+
+
+    ////////////////////////////////////
+    // 上のCreateLoanApplicationで生成Ledgerにデータが生成されていることの確認
+	var la LoanApplication
+	bytes, err := stub.GetState(loanApplicationID)  
+	if err != nil {
+		t.Fatalf("Could not fetch loan application with ID " + loanApplicationID)
+	}
+    // 上のCreateLoanApplicationでLedgerにデータが生成されていることの確認
+    ////////////////////////////////////
+
+	err = json.Unmarshal(bytes, &la)
+	if err != nil {
+		t.Fatalf("Could not unmarshal loan application with ID " + loanApplicationID)
+	}
+	var errors = []string{}
+	var loanApplicationInput LoanApplication
+	err = json.Unmarshal([]byte(loanApplication), &loanApplicationInput)
+	if la.ID != loanApplicationInput.ID {
+		errors = append(errors, "Loan Application ID does not match")
+	}
+	if la.PropertyId != loanApplicationInput.PropertyId {
+		errors = append(errors, "Loan Application PropertyId does not match")
+	}
+	if la.PersonalInfo.Firstname != loanApplicationInput.PersonalInfo.Firstname {
+		errors = append(errors, "Loan Application PersonalInfo.Firstname does not match")
+	}
+	//Can be extended for all fields
+	if len(errors) > 0 {
+		t.Fatalf("Mismatch between input and stored Loan Application")
+		for j := 0; j < len(errors); j++ {
+			fmt.Println(errors[j])
+		}
+	}
+}
+```
+
+また、json.Unmarshal()などを使用するため、importに```encoding/json```を追加してください。
+
+```sample_chaincode_test.go
+import (
+	"encoding/json" // <-追加
+	"fmt"
+	"github.com/hyperledger/fabric/core/chaincode/shim"
+	"testing"
+)
+```
+
+この状態で実行するとLoanApplicationという変数型が未定義というエラーになります。
 
 ```bash
 $ go test
-# _/Users/morizumiyuusuke/Documents/sample_tdd
-./sample_chaincode_test.go:67: undefined: LoanApplication
-./sample_chaincode_test.go:77: undefined: LoanApplication
-FAIL
+# _/home/ubuntu/workspace/sample_tdd
+./sample_chaincode_test.go:68: undefined: LoanApplication
+./sample_chaincode_test.go:78: undefined: LoanApplication
+FAIL    _/home/ubuntu/workspace/sample_tdd [build failed]
 ```
 
-LoanApplicationをsample_chaincode.goに記述します。
+そこで、下記のLoanApplicationなどの定義をsample_chaincode.goに追加します。
 
 ```sample_chaincode.go
-package main
-import (
-    "errors"
-    "fmt"
-    "github.com/hyperledger/fabric/core/chaincode/shim"
-)
-
-type SampleChaincode struct {
-}
-
 type PersonalInfo struct {
 	Firstname string `json:"firstname"`
 	Lastname  string `json:"lastname"`
@@ -615,67 +617,57 @@ type LoanApplication struct {
 	ReviewerId             string        `json:"reviewerId"`
 	LastModifiedDate       string        `json:"lastModifiedDate"`
 }
-
-func (t *SampleChaincode) Init(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
-    return nil, nil
-}
-・・・
 ```
+
 これを実行するとinputする値がないのでエラーになるはずです。
 
 
 ```bash
 $ go test
 Entering TestCreateLoanApplication
-2017/05/11 21:26:41 MockStub( mockStub &{} )
+2017/05/25 01:44:52 MockStub( mockStub &{} )
 Entering TestCreateLoanApplicationValidation
-2017/05/11 21:26:41 MockStub( mockStub &{} )
+2017/05/25 01:44:52 MockStub( mockStub &{} )
 Entering CreateLoanApplication
 Invalid number of args
 Entering TestCreateLoanApplicationValidation2
-2017/05/11 21:26:41 MockStub( mockStub &{} )
+2017/05/25 01:44:52 MockStub( mockStub &{} )
 Entering CreateLoanApplication
 Entering TestCreateLoanApplicationValidation3
-2017/05/11 21:26:41 MockStub( mockStub &{} )
+2017/05/25 01:44:52 MockStub( mockStub &{} )
 Entering CreateLoanApplication
-2017/05/11 21:26:41 MockStub mockStub Getting la1 []
+2017/05/25 01:44:52 MockStub mockStub Getting la1 []
 --- FAIL: TestCreateLoanApplicationValidation3 (0.00s)
-	sample_chaincode_test.go:74: Could not unmarshal loan application with ID la1
+        sample_chaincode_test.go:75: Could not unmarshal loan application with ID la1
 FAIL
 exit status 1
-FAIL
+FAIL    _/home/ubuntu/workspace/sample_tdd      0.022s
 ```
 
 そこで、レジャーにloan applicationを入力する記述にします。
 sample_chaincode.goのCreateLaonApplicationに以下を記述。
 
-```
-・・・
-func (t *SampleChaincode) Invoke(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
-    return nil, nil
-}
-
+```sample_chaincode.go
 func CreateLoanApplication(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
-    fmt.Println("Entering CreateLoanApplication")
- 
-    if len(args) < 2 {
-        fmt.Println("Invalid number of args")
-        return nil, errors.New("Expected atleast two arguments for loan application creation")
-    }
- 
-    var loanApplicationId = args[0]
-    var loanApplicationInput = args[1]
-    //TODO: Include schema validation here
- 
-    err := stub.PutState(loanApplicationId, []byte(loanApplicationInput))
-    if err != nil {
-        fmt.Println("Could not save loan application to ledger", err)
-        return nil, err
-    }
- 
-    fmt.Println("Successfully saved loan application")
-    return []byte(loanApplicationInput), nil
- 
+	fmt.Println("Entering CreateLoanApplication")
+	if len(args) < 2 {
+		fmt.Println("Invalid number of args")
+		return nil, errors.New("Expected atleast two arguments for loan application creation")
+	}
+
+    // 下記から追加
+	var loanApplicationId = args[0]
+	var loanApplicationInput = args[1]
+	//TODO: Include schema validation here
+
+	err := stub.PutState(loanApplicationId, []byte(loanApplicationInput))
+	if err != nil {
+		fmt.Println("Could not save loan application to ledger", err)
+		return nil, err
+	}
+
+	fmt.Println("Successfully saved loan application")
+	return []byte(loanApplicationInput), nil  <-- 戻り値を nil, nilから変更
 }
 ```
 
@@ -683,29 +675,67 @@ func CreateLoanApplication(stub shim.ChaincodeStubInterface, args []string) ([]b
 
 PutStateによって、keyとvalueのペアを保管します。この場合はapplication IDがkeyであり、loan application JSON文字列がvalueになります。実行すると格納されるbyte配列が帰って正常に終了します。
 
-### 8. invoke methodの実装
+テストを実行すると下記のようになります。
+
+```bash
+Entering TestCreateLoanApplication
+2017/05/25 01:49:41 MockStub( mockStub &{} )
+Entering TestCreateLoanApplicationValidation
+2017/05/25 01:49:41 MockStub( mockStub &{} )
+Entering CreateLoanApplication
+Invalid number of args
+Entering TestCreateLoanApplicationValidation2
+2017/05/25 01:49:41 MockStub( mockStub &{} )
+Entering CreateLoanApplication
+2017/05/25 01:49:41 MockStub mockStub Putting la1 [xx xx xx xx ...]
+2017/05/25 01:49:41 MockStub mockStub Key la1 is first element in list
+Successfully saved loan application
+Entering TestCreateLoanApplicationValidation3
+2017/05/25 01:49:41 MockStub( mockStub &{} )
+Entering CreateLoanApplication
+2017/05/25 01:49:41 MockStub mockStub Putting la1 [xx xx xx xx ...]
+2017/05/25 01:49:41 MockStub mockStub Key la1 is first element in list
+Successfully saved loan application
+2017/05/25 01:49:41 MockStub mockStub Getting la1 [xx xx xx xx ...]
+PASS
+ok      _/home/ubuntu/workspace/sample_tdd      0.028s
+```
 
 
-invokeの主な役割としてはしかるべき権限を持った人かのチェックや、正しいfunctionの名前で実行されているかなどをチェックを行う。
+## 5. Invoke methodの実装
+
+shim.Chaincode.Invokeの実装を行います。
+
+### 5.1 要求
+
+1. Invoke() は、入力関数名の引数をチェックし、適切なハンドラに実行を委任する必要があります。
+2. Invoke() は、無効な入力関数名の場合にエラーを返す必要があります。
+3. Invoke() は、チェーンコードの呼び出し側/呼び出し側のトランザクション証明書に基づいて、アクセス制御とアクセス管理を実装/委任する必要があります。 CreateLoanApplicationメソッドを呼び出すには、Bank_Adminだけを許可する必要があります。
+
+### 5.2 Functionality outlined in Requirement 3
+
+最初のテストでは、上記の要件3で概説した機能を検証します。
+
 まずは、sample_chaincode_test.goに以下のようにusernameやroleを定義する。
+
 ```
 func TestInvokeValidation(t *testing.T) {
-    fmt.Println("Entering TestInvokeValidation")
- 
-    attributes := make(map[string][]byte)
-    attributes["username"] = []byte("vojha24")
-    attributes["role"] = []byte("client")
- 
-    stub := shim.NewCustomMockStub("mockStub", new(SampleChaincode), attributes)
-    if stub == nil {
-        t.Fatalf("MockStub creation failed")
-    }
- 
-    _, err := stub.MockInvoke("t123", "CreateLoanApplication", []string{loanApplicationID, loanApplication})
-    if err == nil {
-        t.Fatalf("Expected unauthorized user error to be returned")
-    }
- 
+	fmt.Println("Entering TestInvokeValidation")
+
+	attributes := make(map[string][]byte)
+	attributes["username"] = []byte("vojha24")
+	attributes["role"] = []byte("client")
+
+	stub := shim.NewCustomMockStub("mockStub", new(SampleChaincode), attributes)
+	if stub == nil {
+		t.Fatalf("MockStub creation failed")
+	}
+
+	_, err := stub.MockInvoke("t123", "CreateLoanApplication", []string{loanApplicationID, loanApplication})
+	if err == nil {
+		t.Fatalf("Expected unauthorized user error to be returned")
+	}
+
 }
 ```
 
@@ -716,14 +746,15 @@ caller/invokerの権限属性を上記のようにユーザーで定義ができ
 
 ```bash
 --- FAIL: TestInvokeValidation (0.00s)
-	sample_chaincode_test.go:111: Expected unauthorized user error to be returned
+        sample_chaincode_test.go:112: Expected unauthorized user error to be returned
 FAIL
 exit status 1
+FAIL    _/home/ubuntu/workspace/sample_tdd      0.025s
 ```
 
-sample_chaincode.goにInvokeの関数を修正しエラー応答を記述しておきます。
+sample_chaincode.goのInvoke()関数を下記のように修正しエラー応答を記述しておきます。
 
-```
+```sample_chaincode.go
 func (t *SampleChaincode) Invoke(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
     fmt.Println("Entering Invoke")
     return nil, errors.New("unauthorized user")
@@ -732,37 +763,37 @@ func (t *SampleChaincode) Invoke(stub shim.ChaincodeStubInterface, function stri
 
 テストの実行結果は正常実行されました。
 
-
 ```bash
 $ go test
 Entering TestInvokeValidation
-2017/05/12 00:35:37 MockStub( mockStub &{} )
+2017/05/25 02:35:17 MockStub( mockStub &{} )
 Entering Invoke
 PASS
-ok
+ok      _/home/ubuntu/workspace/sample_tdd      0.019s
 ```
+
+### 5.3. Bank_Admin roleでのテスト
 
 次にBank_Adminのrole権限を以下のように記述します。sample_chaincode_test.goに以下のようなTestInvokeValidation2を記述します。
 
-
-```
+```sample_chaincode_test.go
 func TestInvokeValidation2(t *testing.T) {
-    fmt.Println("Entering TestInvokeValidation")
- 
-    attributes := make(map[string][]byte)
-    attributes["username"] = []byte("vojha24")
-    attributes["role"] = []byte("Bank_Admin")
- 
-    stub := shim.NewCustomMockStub("mockStub", new(SampleChaincode), attributes)
-    if stub == nil {
-        t.Fatalf("MockStub creation failed")
-    }
- 
-    _, err := stub.MockInvoke("t123", "CreateLoanApplication", []string{loanApplicationID, loanApplication})
-    if err != nil {
-        t.Fatalf("Expected CreateLoanApplication to be invoked")
-    }
- 
+	fmt.Println("Entering TestInvokeValidation")
+
+	attributes := make(map[string][]byte)
+	attributes["username"] = []byte("vojha24")
+	attributes["role"] = []byte("Bank_Admin")
+
+	stub := shim.NewCustomMockStub("mockStub", new(SampleChaincode), attributes)
+	if stub == nil {
+		t.Fatalf("MockStub creation failed")
+	}
+
+	_, err := stub.MockInvoke("t123", "CreateLoanApplication", []string{loanApplicationID, loanApplication})
+	if err != nil {
+		t.Fatalf("Expected CreateLoanApplication to be invoked")
+	}
+
 }
 ```
 
@@ -787,6 +818,19 @@ func (t *SampleChaincode) Invoke(stub shim.ChaincodeStubInterface, function stri
 ```
 
 これで実行すると正常に終了し、role権限のチェックが実装されました。
+
+```
+Entering TestInvokeValidation
+2017/05/25 02:42:43 MockStub( mockStub &{} )
+Entering Invoke
+Entering TestInvokeValidation
+2017/05/25 02:42:43 MockStub( mockStub &{} )
+Entering Invoke
+PASS
+ok      _/home/ubuntu/workspace/sample_tdd      0.025s
+```
+
+### 5.4. Check input function name
 
 次は関数名のチェックです。
 sample_chaincode_test.goに以下の関数を追加します。
@@ -815,36 +859,52 @@ func TestInvokeFunctionValidation(t *testing.T) {
 実行するとエラーになることがわかります。
 
 ```bash
-Entering Invoke
 --- FAIL: TestInvokeFunctionValidation (0.00s)
-	sample_chaincode_test.go:149: Expected invalid function name error
+        sample_chaincode_test.go:150: Expected invalid function name error
 FAIL
 exit status 1
+FAIL    _/home/ubuntu/workspace/sample_tdd      0.028s
 ```
 
 そこで、sample_chaincode.goのInvokeに若干変更を行います。
 
-```
+```sample_chaincode.go
 func (t *SampleChaincode) Invoke(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
-    fmt.Println("Entering Invoke")
- 
-    ubytes, _ := stub.ReadCertAttribute("username")
-    rbytes, _ := stub.ReadCertAttribute("role")
- 
-    username := string(ubytes)
-    role := string(rbytes)
- 
-    if role != "Bank_Admin" {
-        return nil, errors.New("caller with " + username + " and role " + role + " does not have access to invoke CreateLoanApplication")
-    }
- 
-    return nil, errors.New("Invalid function name")
+	fmt.Println("Entering Invoke")
+
+	ubytes, _ := stub.ReadCertAttribute("username")
+	rbytes, _ := stub.ReadCertAttribute("role")
+
+	username := string(ubytes)
+	role := string(rbytes)
+
+	if role != "Bank_Admin" {
+		return nil, errors.New("caller with " + username + " and role " + role + " does not have access to invoke CreateLoanApplication")
+	}
+	return nil, errors.New("Invalid function name") // <-- change nil to errors
 }
 ```
-これで実行するとInvalidな名前の関数が指定されたとメッセージが出力されます。
+
+これで実行するとTestInvokeFunctionValidationは成功しますが、
+TestInvokeValidation2は失敗します。
+
+```bash
+Entering Invoke
+--- FAIL: TestInvokeValidation2 (0.00s)
+        sample_chaincode_test.go:131: Expected CreateLoanApplication to be invoked
+Entering TestInvokeFunctionValidation
+2017/05/25 03:57:34 MockStub( mockStub &{} )
+Entering Invoke
+FAIL
+exit status 1
+FAIL    _/home/ubuntu/workspace/sample_tdd      0.023s
+```
+
+### 5.5. Check the correct function name
+
 正しく動くように、TestInvokeFunctionValidation2を追加します。
 
-```
+```sample_chaincode_test.go
 func TestInvokeFunctionValidation2(t *testing.T) {
     fmt.Println("Entering TestInvokeFunctionValidation2")
  
@@ -867,20 +927,26 @@ func TestInvokeFunctionValidation2(t *testing.T) {
 
 このあとに実行すると正しくエラーメッセージが出力されていることが確認できます。
 ```bash
+Entering Invoke
+--- FAIL: TestInvokeValidation2 (0.00s)
+        sample_chaincode_test.go:131: Expected CreateLoanApplication to be invoked
+Entering TestInvokeFunctionValidation
+2017/05/25 04:13:06 MockStub( mockStub &{} )
+Entering Invoke
 Entering TestInvokeFunctionValidation2
-2017/05/12 01:27:49 MockStub( mockStub &{} )
+2017/05/25 04:13:06 MockStub( mockStub &{} )
 Entering Invoke
 --- FAIL: TestInvokeFunctionValidation2 (0.00s)
-	sample_chaincode_test.go:168: Expected CreateLoanApplication function to be invoked
+        sample_chaincode_test.go:168: Expected CreateLoanApplication function to be invoked
 FAIL
 exit status 1
-FAIL
+FAIL    _/home/ubuntu/workspace/sample_tdd      0.021s
 ```
 
 これでInvokeに正しい関数名を返すようにします。
 sample_chaincode.goのInvokeの箇所を以下のように編集。
 
-```
+```sample_chaincode.go
 func (t *SampleChaincode) Invoke(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
     fmt.Println("Entering Invoke")
  
@@ -901,33 +967,45 @@ func (t *SampleChaincode) Invoke(stub shim.ChaincodeStubInterface, function stri
 }
 ```
 このとき実際にCreateLoanApplicationメソッドが呼び出されInvokeされたかどうかのテストを行います。
-理想的にはスパイオブジェクトを用いてやるべきですが、簡素化するためinvokeメソッドからのアウトプットから確認します。TestInvokeFunctionValidation2を以下のように書き換えます。
+理想的にはスパイオブジェクトを用いてやるべきですが、簡素化するためinvokeメソッドからのアウトプットから確認します。
+TestInvokeFunctionValidation2を以下のように書き換えます。
 
-```
+```sample_chaincode_test.go
 func TestInvokeFunctionValidation2(t *testing.T) {
-    fmt.Println("Entering TestInvokeFunctionValidation2")
- 
-    attributes := make(map[string][]byte)
-    attributes["username"] = []byte("vojha24")
-    attributes["role"] = []byte("Bank_Admin")
- 
-    stub := shim.NewCustomMockStub("mockStub", new(SampleChaincode), attributes)
-    if stub == nil {
-        t.Fatalf("MockStub creation failed")
-    }
- 
-    bytes, err := stub.MockInvoke("t123", "CreateLoanApplication", []string{loanApplicationID, loanApplication})
-    if err != nil {
-        t.Fatalf("Expected CreateLoanApplication function to be invoked")
-    }
-    //A spy could have been used here to ensure CreateLoanApplication method actually got invoked.
-    var la LoanApplication
-    err = json.Unmarshal(bytes, &la)
-    if err != nil {
-        t.Fatalf("Expected valid loan application JSON string to be returned from CreateLoanApplication method")
-    }
- 
+	fmt.Println("Entering TestInvokeFunctionValidation2")
+
+	attributes := make(map[string][]byte)
+	attributes["username"] = []byte("vojha24")
+	attributes["role"] = []byte("Bank_Admin")
+
+	stub := shim.NewCustomMockStub("mockStub", new(SampleChaincode), attributes)
+	if stub == nil {
+		t.Fatalf("MockStub creation failed")
+	}
+
+	// Add and modify the following lines
+	bytes, err := stub.MockInvoke("t123", "CreateLoanApplication", []string{loanApplicationID, loanApplication})
+	if err != nil {
+		t.Fatalf("Expected CreateLoanApplication function to be invoked")
+	}
+	//A spy could have been used here to ensure CreateLoanApplication method actually got invoked.
+	var la LoanApplication
+	err = json.Unmarshal(bytes, &la)
+	if err != nil {
+		t.Fatalf("Expected valid loan application JSON string to be returned from CreateLoanApplication method")
+	}
+
 }
 ```
 
-これでテストを実行し正常終了すればOKです。
+これでストを実行すれば下記のように正常終了するはずです。
+
+```bash
+Successfully saved loan application
+PASS
+ok      _/home/ubuntu/workspace/sample_tdd      0.024s
+```
+
+## 6. 非決定的な関数のテスト
+
+
