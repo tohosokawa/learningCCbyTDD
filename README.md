@@ -212,9 +212,9 @@ $ go test
 
 TDDでの開発サイクルは Red/Green/Refactor と呼ばれます。
 
-* <span style="color: red; ">Red</span> : テストコードを書き、実行して**失敗する**
-* <span style="color: green; ">Green</span> : テストに通る最低限のコードを書く
-* <span style="color: blue; ">Refactor</span> : コードのリファクタリング（重複部分の関数化など）を行う。
+* <font color=red>Red</font> : テストコードを書き、実行して**失敗する**
+* <font color=green>Green</font> : テストに通る最低限のコードを書く
+* <font color=blue>Refactor</font> : コードのリファクタリング（重複部分の関数化など）を行う。
 
 
 それでは、以下のとおりにsample_chaincode.go を編集します。
@@ -283,7 +283,7 @@ func (t *SampleChaincode) Invoke(stub shim.ChaincodeStubInterface, function stri
 SampleChaincodeはshim.NewCustomMockStub()にChaincode型の値として渡しているため、
 下記に定義されているようにInit, Invoke, Queryの３つの関数が必要になります。
 
-src/github.com/hyperledger/fabric/chaincode/shim/interfaces.go
+$GOPATH/src/github.com/hyperledger/fabric/chaincode/shim/interfaces.go
 
 ```go
 type Chaincode interface {
@@ -351,10 +351,12 @@ func TestCreateLoanApplicationValidation(t *testing.T) {
     }
  
     stub.MockTransactionStart("t123")
+    // Start transactional context
     _, err := CreateLoanApplication(stub, []string{})
     if err == nil {
         t.Fatalf("Expected CreateLoanApplication to return validation error")
     }
+    // End transactional context
     stub.MockTransactionEnd("t123")
 }
 ```
