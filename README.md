@@ -718,7 +718,7 @@ shim.Chaincode.Invokeの実装を行います。
 
 まずは、sample_chaincode_test.goに以下のようにusernameやroleを定義する。
 
-```
+```sample_chaincode_test.go
 func TestInvokeValidation(t *testing.T) {
 	fmt.Println("Entering TestInvokeValidation")
 
@@ -799,7 +799,7 @@ func TestInvokeValidation2(t *testing.T) {
 
 sample_chaincode.goも以下のようにusernameとroleを読み込むようにし、権限の確認を行います。
 
-```
+```sample_chaincode.go
 func (t *SampleChaincode) Invoke(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
     fmt.Println("Entering Invoke")
      
@@ -1008,4 +1008,114 @@ ok      _/home/ubuntu/workspace/sample_tdd      0.024s
 
 ## 6. 非決定的な関数のテスト
 
+[ここ](https://www.ibm.com/developerworks/cloud/library/cl-ibm-blockchain-chaincode-development-using-golang/index.html#N1028D)
+に書かれているように Chaincode は決定的でなければいけません。
 
+例を示します。 
+4つのピアすべてがピアを検証している、4ピアのHyperledger Fabricベースのブロックチェーンネットワークを利用してください。
+
+これは、トランザクションをブロックチェーンに書き込む必要がある場合は、
+4人のピアがすべて、その元帳のローカルコピーでトランザクションを独立して実行することを意味します。
+簡単に言えば、4つのピアのそれぞれは、同じ入力を持つ独立したチェーンコード機能を独立して実行し、ローカルレジ係状態を更新します。
+このようにして、4人のピアはすべて同じ元帳状態になります。
+
+したがって、ピアによってチェーンコードが4回実行されると、
+同じ結果が得られ、同じ元帳状態になる必要があります。
+これは確定的チェーンコードと呼ばれます。
+
+
+下記のコードは、CreateLoanApplication関数の非決定的なバージョンを示しています。
+つまり、同じ入力でこの関数を複数回実行すると、結果が異なることになります。
+
+```sample_chaincode.go
+func NonDeterministicFunction(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
+	fmt.Println("Entering NonDeterministicFunction")
+	//Use random number generator to generate the ID
+	var random = rand.New(rand.NewSource(time.Now().UnixNano()))
+	var loanApplicationID = "la1" + strconv.Itoa(random.Intn(1000))
+	var loanApplication = args[0]
+	var la LoanApplication
+	err := json.Unmarshal([]byte(loanApplication), &la)
+	if err != nil {
+		fmt.Println("Could not unmarshal loan application", err)
+		return nil, err
+	}
+	la.ID = loanApplicationID
+	laBytes, err := json.Marshal(&la)
+	if err != nil {
+		fmt.Println("Could not marshal loan application", err)
+		return nil, err
+	}
+	err = stub.PutState(loanApplicationID, laBytes)
+	if err != nil {
+		fmt.Println("Could not save loan application to ledger", err)
+		return nil, err
+	}
+
+	fmt.Println("Successfully saved loan application")
+	return []byte(loanApplicationID), nil
+}
+```
+
+import には下記を追加してください。
+
+```sample_chaincode.go
+import (
+	"encoding/json" // <-- add
+	"errors"
+	"fmt"
+	"github.com/hyperledger/fabric/core/chaincode/shim"
+	"math/rand"     // <-- add
+	"strconv"       // <-- add
+	"time"          // <-- add
+)
+```
+
+上記のメソッドは、ローンアプリケーションIDを入力の一部として渡した
+元のCreateLoanApplicationメソッドとは異なり、
+乱数ジェネレータを使用してIDを生成し、渡されたローンアプリケーションコンテンツに追加します。
+
+4行目と5行目は、ローンアプリケーションIDの生成方法を示しています。
+19行目は更新されたローン申請内容を元帳に保存します。
+
+```sample_chaincode_test.go
+func TestNonDeterministicFunction(t *testing.T) {
+	fmt.Println("Entering TestNonDeterministicFunction")
+	attributes := make(map[string][]byte)
+	const peerSize = 4
+	var stubs [peerSize]*shim.CustomMockStub
+	var responses [peerSize][]byte
+	var loanApplicationCustom = `{"propertyId":"prop1","landId":"land1","permitId":"permit1","buyerId":"vojha24","personalInfo":{"firstname":"Varun","lastname":"Ojha","dob":"dob","email":"varun@gmail.com","mobile":"99999999"},"financialInfo":{"monthlySalary":16000,"otherExpenditure":0,"monthlyRent":4150,"monthlyLoanPayment":4000},"status":"Submitted","requestedAmount":40000,"fairMarketValue":58000,"approvedAmount":40000,"reviewedBy":"bond","lastModifiedDate":"21/09/2016 2:30pm"}`
+	//Simulate execution of the chaincode function by multiple peers on their local ledgers
+	for j := 0; j < peerSize; j++ {
+		stub := shim.NewCustomMockStub("mockStub", new(SampleChaincode), attributes)
+		if stub == nil {
+			t.Fatalf("MockStub creation failed")
+		}
+		stub.MockTransactionStart("tx" + string(j))
+		resp, err := NonDeterministicFunction(stub, []string{loanApplicationCustom})
+		if err != nil {
+			t.Fatalf("Could not execute NonDeterministicFunction ")
+		}
+		stub.MockTransactionEnd("tx" + string(j))
+		stubs[j] = stub
+		responses[j] = resp
+	}
+
+	for i := 0; i < peerSize; i++ {
+		if i < (peerSize - 1) {
+			la1Bytes, _ := stubs[i].GetState(string(responses[i]))
+			la2Bytes, _ := stubs[i+1].GetState(string(responses[i+1]))
+			la1 := string(la1Bytes)
+			la2 := string(la2Bytes)
+			if la1 != la2 {
+				//TODO: Compare individual values to find mismatch
+				t.Fatalf("Expected all loan applications to be identical. Non Deterministic chaincode error")
+			}
+		}
+		//All loan applications retrieved from each of the peer's ledger's match. Function is deterministic
+
+	}
+
+}
+```
